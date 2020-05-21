@@ -1,0 +1,27 @@
+FROM python:3
+# it will enable python to do stdout logs instead of being buffered
+ENV PYTHONUNBUFFERED 1
+ENV LANG en_US.utf8
+
+# creating
+RUN mkdir /app
+
+# copy all file in app folder
+COPY . /app
+# copy requriements.txt in app folder
+COPY requirements.txt /requirements.txt
+# copy db connectivity test script, because we have made /app as current working directory so script can be executed.
+COPY docker/django/scripts/db_connectivity.sh /db_connectivity.sh
+# copy start gunicorn server script, because we have made /app as current working directory so script can be executed.
+COPY docker/django/scripts/gunicorn.sh /gunicorn.sh
+# running pip command to install all dependencies
+RUN pip install -r requirements.txt
+
+RUN chmod +x /db_connectivity.sh
+RUN chmod +x /gunicorn.sh
+
+# making /app as a current working dir
+WORKDIR /app
+
+#It will check whether we are able to connect to postgres service or not.
+ENTRYPOINT ["/db_connectivity.sh"]

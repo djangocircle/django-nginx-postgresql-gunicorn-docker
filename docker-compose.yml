@@ -1,0 +1,52 @@
+version: '3'
+ 
+volumes:
+  # static volume will be mounted to both nginx and django gunicorn services.
+  static_volume:
+  # postgres data volume will be mounted to postgres services
+  postgres_data:
+ 
+services:
+  postgres:
+    command: postgres -c max_connections=100
+    build:
+      context: .
+      # it points to the docker file which has instruction to build this service.
+      dockerfile: ./docker/postgres/dockerfile
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    ports:
+      - "5432:5432"
+    # all environment variables are defined in below file.
+    env_file:
+      - ./docker/postgres/.postgres_local_env
+ 
+  django:
+    build:
+      context: .
+      # it points to the docker file which has instruction to build this service.
+      dockerfile: ./docker/django/dockerfile
+    # this command will execute after execution all build steps from './docker/django/dockerfile'
+    command: /gunicorn.sh
+    volumes:
+      - static_volume:/app/static
+    # links attribute will let postgres service become available first.
+    links:
+      - postgres
+    expose:
+      - "8000"
+    restart: always
+    env_file:
+      - ./docker/django/.django_local_env
+
+  nginx:
+    build:
+      context: .
+      dockerfile: ./docker/nginx/dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - static_volume:/app/static
+    links:
+      - django
+    restart: always
